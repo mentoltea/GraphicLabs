@@ -38,7 +38,7 @@ int main() {
     float pi = 3.1415;
     float k = 1;
     while (1) {
-        sh.clear('`');
+        sh.clear();
 
         
         {
