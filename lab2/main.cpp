@@ -65,6 +65,13 @@ void setFPS(double nFPS) {
 
 int WINX = 1200;
 int WINY = 700;
+
+GL::GLuint vertexBuffer = 0;
+GL::GLuint colorBuffer = 0;
+std::vector<GL::GLsizei> vertexCounts;
+std::vector<Point> allPoints;
+std::vector<Color> allColors;
+
 void reshape(int width, int height) {
     GL::glutReshapeWindow(WINX, WINY);
 }
@@ -74,121 +81,76 @@ void force_reshape(int width, int height) {
 }
 
 
-void draw_line(Point start, Point end, Color color, int width) {
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    GL::glLineWidth(width);
-    GL::glBegin(GL_LINES);
-        GL::glVertex2d(start.x, start.y);
-        GL::glVertex2d(end.x, end.y);
-    GL::glEnd();  
-}
-
-
-void draw_circle(Point center, double radius, Color color, double width, int shapeness) {
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    GL::glLineWidth(width);
-    Point p1 = {center.x + radius, center.y};
-    double koef = (2*M_PI)/shapeness;
-    GL::glBegin(GL_LINES);
-    for (int i=0; i<shapeness+1; i++) {
-        GL::glVertex2d(p1.x, p1.y);
-        p1.x = center.x + cos((double)i*koef)*radius;
-        p1.y = center.y + sin((double)i*koef)*radius;
-        GL::glVertex2d(p1.x, p1.y);
+std::pair <
+    std::vector<Point>,
+    std::vector<Color>
+> draw_filled_ellipse(Point center, Point radii, Color color, int shapeness) {
+    std::pair<std::vector<Point>, std::vector<Color> > result;
+    
+    double koef = (2 * M_PI) / shapeness;
+    
+    result.first.push_back(center);
+    result.second.push_back(color);
+    
+    for (int i = 0; i <= shapeness; i++) {
+        double angle = i * koef;
+        result.first.push_back(Point(
+            center.x + cos(angle) * radii.x,
+            center.y + sin(angle) * radii.y
+        ));
+        result.second.push_back(color);
     }
-    GL::glEnd();
+    
+    return result;
 }
 
-void draw_filled_circle(Point center, double radius, Color color, int shapeness) {
-    // std::cout << "(" << center.x << " " << center.y << ")" << " " << radius << std::endl;
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    Point p1 = {center.x + radius, center.y};
-    double koef = (2*M_PI)/shapeness;
-    GL::glBegin(GL_TRIANGLE_FAN);
-    for (int i=0; i<shapeness+1; i++) {
-        GL::glVertex2d(p1.x, p1.y);
-        p1.x = center.x + cos((double)i*koef)*radius;
-        p1.y = center.y + sin((double)i*koef)*radius;
-        GL::glVertex2d(p1.x, p1.y);
+std::pair<std::vector<Point>, std::vector<Color> > 
+draw_filled_rect(Point point, double width, double height, Color color) {
+    std::pair<std::vector<Point>, std::vector<Color> > result;
+    
+    Point center(point.x + width/2, point.y + height/2);
+    result.first.push_back(center);
+    result.second.push_back(color);
+    
+    result.first.push_back(Point(point.x, point.y));
+    result.second.push_back(color);
+    result.first.push_back(Point(point.x + width, point.y));
+    result.second.push_back(color);
+    result.first.push_back(Point(point.x + width, point.y + height));
+    result.second.push_back(color);
+    result.first.push_back(Point(point.x, point.y + height));
+    result.second.push_back(color);
+    result.first.push_back(Point(point.x, point.y)); 
+    result.second.push_back(color);
+    
+    return result;
+}
+
+std::pair<std::vector<Point>, std::vector<Color> > 
+draw_filled_poly(std::vector<Point> &points, Color color) {
+    std::pair<std::vector<Point>, std::vector<Color> > result;
+    
+    if (points.size() < 3) return result;
+    
+    Point center(0, 0);
+    for (const auto& p : points) {
+        center.x += p.x;
+        center.y += p.y;
     }
-    GL::glEnd();
-}
-
-void draw_ellipse(Point center, Point radii, Color color, double width, int shapeness) {
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    GL::glLineWidth(width);
-    Point p1 = {center.x + radii.x, center.y};
-    double koef = (2*M_PI)/shapeness;
-    GL::glBegin(GL_LINES);
-    for (int i=0; i<shapeness+1; i++) {
-        GL::glVertex2d(p1.x, p1.y);
-        p1.x = center.x + cos((double)i*koef)*radii.x;
-        p1.y = center.y + sin((double)i*koef)*radii.y;
-        GL::glVertex2d(p1.x, p1.y);
+    center.x /= points.size();
+    center.y /= points.size();
+    
+    result.first.push_back(center);
+    result.second.push_back(color);
+    
+    for (const auto& p : points) {
+        result.first.push_back(p);
+        result.second.push_back(color);
     }
-    GL::glEnd();
-}
-
-void draw_filled_ellipse(Point center, Point radii, Color color, int shapeness) {
-    // std::cout << "(" << center.x << " " << center.y << ")" << " " << radius << std::endl;
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    Point p1 = {center.x + radii.x, center.y};
-    double koef = (2*M_PI)/shapeness;
-    GL::glBegin(GL_TRIANGLE_FAN);
-    for (int i=0; i<shapeness+1; i++) {
-        GL::glVertex2d(p1.x, p1.y);
-        p1.x = center.x + cos((double)i*koef)*radii.x;
-        p1.y = center.y + sin((double)i*koef)*radii.y;
-        GL::glVertex2d(p1.x, p1.y);
-    }
-    GL::glEnd();
-}
-
-void draw_rect(Point point,  double width, double height, Color color, double linewidth) {
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    GL::glLineWidth(linewidth);
-    GL::glBegin(GL_LINES);
-    GL::glVertex2d(point.x, point.y);
-    GL::glVertex2d(point.x + width, point.y);GL::glVertex2d(point.x + width, point.y);
-    GL::glVertex2d(point.x + width, point.y + height);GL::glVertex2d(point.x + width, point.y + height);
-    GL::glVertex2d(point.x, point.y + height);GL::glVertex2d(point.x, point.y + height);
-    GL::glVertex2d(point.x, point.y);
-    GL::glEnd();
-}
-
-
-void draw_filled_rect(Point point,  double width, double height, Color color) {
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    GL::glBegin(GL_QUADS);
-    GL::glVertex2d(point.x, point.y);
-        GL::glVertex2d(point.x + width, point.y);
-        GL::glVertex2d(point.x + width, point.y + height);
-        GL::glVertex2d(point.x, point.y + height);
-        GL::glVertex2d(point.x, point.y);
-    GL::glEnd();
-}
-
-void draw_poly(std::vector<Point> &points, Color color, int linewidth) {
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    GL::glLineWidth(linewidth);
-    GL::glBegin(GL_LINES);
-    int size = points.size();
-    for (int i=1; i<size+1; i++) {
-        GL::glVertex2d(points[i-1].x, points[i-1].y);
-        GL::glVertex2d(points[i%size].x, points[i%size].y);
-    }
-    GL::glEnd();  
-}
-
-void draw_filled_poly(std::vector<Point> &points, Color color) {
-    GL::glColor4f(color.r, color.g, color.b, color.a);
-    GL::glBegin(GL_TRIANGLE_FAN);
-    int size = points.size();
-    for (int i=1; i<size+1; i++) {
-        GL::glVertex2d(points[i-1].x, points[i-1].y);
-        GL::glVertex2d(points[i%size].x, points[i%size].y);
-    }
-    GL::glEnd();  
+    result.first.push_back(points[0]);
+    result.second.push_back(color);
+    
+    return result;
 }
 
 struct State {
@@ -231,7 +193,10 @@ public:
 
 class DrawableObject {
 public:
-    virtual void draw(std::shared_ptr < DrawingContext > context) = 0;
+    virtual std::pair <
+        std::vector<Point>,
+        std::vector<Color>
+    > draw(std::shared_ptr < DrawingContext > context) = 0;
 };
 
 class ComplexObject: public UpdatableObject, public DrawableObject {};
@@ -268,10 +233,34 @@ public:
         return true;
     }
 
-    void draw(std::shared_ptr<DrawingContext> context) override {
+    std::pair <
+        std::vector<Point>,
+        std::vector<Color>
+    > draw(std::shared_ptr<DrawingContext> context) override {
+        std::pair <
+            std::vector<Point>,
+            std::vector<Color>
+        > result;
+        
         for (auto& obj: drawies) {
-            obj->draw(context);
+            auto current = obj->draw(context);
+
+            vertexCounts.push_back(current.first.size());
+
+            result.first.insert(
+                result.first.end(),
+                current.first.begin(),
+                current.first.end()
+            );
+
+            result.second.insert(
+                result.second.end(),
+                current.second.begin(),
+                current.second.end()
+            );
         }
+
+        return result;
     }
 };
 
@@ -287,14 +276,16 @@ public:
     Polygon(std::vector<Point> &points, Color color): points(points), color(color) {}
     Polygon(std::vector<Point> &points, Color color, double linewidth): points(points), color(color), filled(false), linewidth(linewidth) {}
 
-    void draw(std::shared_ptr<DrawingContext> context) override {
+    std::pair <
+        std::vector<Point>,
+        std::vector<Color>
+    > draw(std::shared_ptr<DrawingContext> context) override {
         std::vector<Point> temp_points = points;
         for (auto &point: temp_points) {
             point = context->transform(point);
         }
 
-        if (filled) draw_filled_poly(temp_points, color);
-        else draw_poly(temp_points, color, linewidth);
+        return draw_filled_poly(temp_points, color);
     }
 };
 
@@ -311,9 +302,11 @@ public:
     Rectangle(Point lefttop, Point size, Color color): lefttop(lefttop), size(size), color(color) {}
     Rectangle(Point lefttop, Point size, Color color, double linewidth): lefttop(lefttop), size(size), color(color), filled(false), linewidth(linewidth) {}
 
-    void draw(std::shared_ptr<DrawingContext> context) override {
-        if (filled) draw_filled_rect(context->transform(lefttop), context->transform_x(size.x), context->transform_y(size.y), color);
-        else draw_rect(context->transform(lefttop), context->transform_x(size.x), context->transform_y(size.y), color, linewidth);
+    std::pair <
+        std::vector<Point>,
+        std::vector<Color>
+    > draw(std::shared_ptr<DrawingContext> context) override {
+        return draw_filled_rect(context->transform(lefttop), context->transform_x(size.x), context->transform_y(size.y), color);
     }
 };
 
@@ -330,11 +323,13 @@ public:
     Circle(Point center, double radius, Color color): center(center), radius(radius), color(color) {}
     Circle(Point center, double radius, Color color, double linewidth): center(center), radius(radius), color(color), filled(false), linewidth(linewidth) {}
 
-    void draw(std::shared_ptr<DrawingContext> context) override {
+    std::pair <
+        std::vector<Point>,
+        std::vector<Color>
+    > draw(std::shared_ptr<DrawingContext> context) override {
         // std::cout << "Circle " << std::endl;
 
-        if (filled) draw_filled_ellipse(context->transform(center), Point(context->transform_x(radius), context->transform_y(radius)), color, 100);
-        else draw_ellipse(context->transform(center), Point(context->transform_x(radius), context->transform_y(radius)), color, linewidth, 100);
+        return draw_filled_ellipse(context->transform(center), Point(context->transform_x(radius), context->transform_y(radius)), color, 100);
     }
 };
 
@@ -359,8 +354,11 @@ public:
         return true;
     }
 
-    void draw(std::shared_ptr<DrawingContext> context) override {
-        circle->draw(context);
+    std::pair <
+        std::vector<Point>,
+        std::vector<Color>
+    > draw(std::shared_ptr<DrawingContext> context) override {
+        return circle->draw(context);
     }
 };
 
@@ -385,7 +383,10 @@ public:
         return true;
     }
 
-    void draw(std::shared_ptr<DrawingContext> context) override {
+    std::pair <
+        std::vector<Point>,
+        std::vector<Color>
+    > draw(std::shared_ptr<DrawingContext> context) override {
         std::shared_ptr<DrawingContext> newCtx;
         newCtx.reset(new DrawingContext(*context));
 
@@ -393,7 +394,7 @@ public:
 
         newCtx->lefttop = newLeftTop;
 
-        object->draw(newCtx);
+        return object->draw(newCtx);
     }
 };
 
@@ -418,10 +419,13 @@ public:
         return true;
     }
 
-    void draw(std::shared_ptr<DrawingContext> context) override {
+    std::pair <
+        std::vector<Point>,
+        std::vector<Color>
+    > draw(std::shared_ptr<DrawingContext> context) override {
         Color color = color1*(1 - offset) + color2*offset; 
         object->color = color;
-        object->draw(context);
+        return object->draw(context);
     }
 };
 
@@ -511,7 +515,7 @@ void prepare() {
         std::shared_ptr<RotatingAnimation> moon(
             new RotatingAnimation( 
                 std::shared_ptr<Circle>(new Circle(
-                    Point(0,0), 0.08, {1, 1, 1, 1}
+                    Point(0,0), 0.08, {0.9, 0.9, 0.9, 1}
                 )),
                 Point(0.5, 0), 0.1, M_PI/4 + M_PI, -speed
             )
@@ -562,7 +566,7 @@ void prepare() {
         main_stage->add_updatie(anim);
         main_stage->add_drawie(anim);
     }
-    
+
     {// House roof
         std::vector<Point> points = std::vector(
             {Point(0.3, 0.45), Point(0.34, 0.55), Point(0.38, 0.45)}
@@ -574,7 +578,7 @@ void prepare() {
             )
         );
         //Point(0.3,0.3), Point(0.08,0.15)
-        
+
         std::shared_ptr< ColorChangingAnimation<Polygon> > anim(
             new ColorChangingAnimation<Polygon>(
                 back, 
@@ -583,57 +587,15 @@ void prepare() {
                 speed/M_PI
             )
         );
-        
-        
+
         main_stage->add_updatie(anim);
         main_stage->add_drawie(anim);
     }
+}
 
-    {// House
-            std::shared_ptr< Rectangle > back (
-                new Rectangle(
-                    Point(0.3 + 0.2,0.3), Point(0.08,0.15), {0,0,0,1}
-                )
-            );
-    
-            std::shared_ptr< ColorChangingAnimation<Rectangle> > anim(
-                new ColorChangingAnimation<Rectangle>(
-                    back, 
-                    {0.278, 0.04, 0.027},
-                    {0.121, 0.043, 0.035},
-                    speed/M_PI
-                )
-            );
-    
-            main_stage->add_updatie(anim);
-            main_stage->add_drawie(anim);
-        }
-
-    {// House roof
-        std::vector<Point> points = std::vector(
-            {Point(0.3 + 0.2, 0.45), Point(0.34 + 0.2, 0.55), Point(0.38 + 0.2, 0.45)}
-        );
-        std::shared_ptr< Polygon > back (
-            new Polygon(
-                points,
-                {0,0,0,1}
-            )
-        );
-        //Point(0.3,0.3), Point(0.08,0.15)
-        
-        std::shared_ptr< ColorChangingAnimation<Polygon> > anim(
-            new ColorChangingAnimation<Polygon>(
-                back, 
-                {0.807, 0.533, 0.101},
-                {0.325, 0.196, 0},
-                speed/M_PI
-            )
-        );
-        
-        
-        main_stage->add_updatie(anim);
-        main_stage->add_drawie(anim);
-    }
+void init_buffers() {
+    GL::glGenBuffers(1, &vertexBuffer);
+    GL::glGenBuffers(1, &colorBuffer);
 }
 
 void draw() {
@@ -641,7 +603,44 @@ void draw() {
 
     context->lefttop = {0,0};
     context->size = {(double)WINX, (double)WINY};
-    main_stage->draw(context);
+    
+    vertexCounts.clear();
+    allPoints.clear();
+    allColors.clear();
+    
+    auto buffers = main_stage->draw(context);
+    allPoints = buffers.first;
+    allColors = buffers.second;
+    
+    if (!allPoints.empty() && !allColors.empty()) {
+        GL::glEnableClientState(GL_VERTEX_ARRAY);
+        GL::glEnableClientState(GL_COLOR_ARRAY);
+        
+        GL::glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+        GL::glBufferData(GL_ARRAY_BUFFER, 
+                        allPoints.size() * sizeof(Point), 
+                        allPoints.data(), 
+                        GL_DYNAMIC_DRAW);
+        GL::glVertexPointer(2, GL_DOUBLE, 0, 0);
+        
+        GL::glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+        GL::glBufferData(GL_ARRAY_BUFFER, 
+                        allColors.size() * sizeof(Color), 
+                        allColors.data(), 
+                        GL_DYNAMIC_DRAW);
+        GL::glColorPointer(4, GL_DOUBLE, 0, 0);
+        
+        size_t offset = 0;
+        for (GL::GLsizei count : vertexCounts) {
+            GL::glDrawArrays(GL_TRIANGLE_FAN, offset, count);
+            offset += count;
+        }
+        
+        GL::glDisableClientState(GL_VERTEX_ARRAY);
+        GL::glDisableClientState(GL_COLOR_ARRAY);
+        
+        GL::glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 
     GL::glutSwapBuffers();
     GL::glutPostRedisplay();
@@ -662,20 +661,24 @@ void update() {
 
 int main(int argc, char** argv) {
     srand(time(0));
-    prepare();
-
+    
     // glut
     GL::glutInit(&argc, argv);
     GL::glutInitDisplayMode(GLUT_DOUBLE);
     GL::glutInitWindowSize(WINX,WINY);
     GL::glutInitWindowPosition(100, 100);
     GL::glutCreateWindow("Laba");
+    GL::glewInit();
     GL::glClearColor(1, 1, 1, 0);
-
+    
     GL::glMatrixMode(GL_PROJECTION);
     GL::glLoadIdentity();
     
     GL::glOrtho(0, WINX, 0, WINY, 0, 1);
+    
+    init_buffers();
+    prepare();
+    
     GL::glutDisplayFunc(update);
     GL::glutReshapeFunc(reshape);
     GL::glutKeyboardFunc(keyboardKeys);

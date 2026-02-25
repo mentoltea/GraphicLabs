@@ -53,7 +53,7 @@ int main() {
             x2 = sizex/2 + k*std::cos(t + 2*pi*2/3)*sizex/2;
             y2 = sizey/2 + k*std::sin(t + 2*pi*2/3)*sizey/2;
             
-            sh.draw_circle(x0, y0, 5, 'o');
+            sh.draw_circle((x0 + x1 + x2)/3, (y0 + y1 + y2)/3, 5, 'o');
             sh.draw_triangle(x0, y0, x1, y1, x2, y2, 'A');
         }
         {

@@ -18,7 +18,7 @@ void main()
     
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(LightPos - FragPos);
-    float diff = max(dot(norm, lightDir), 0.0);
+    float diff = max(dot(-norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
     
     vec3 viewDir = normalize(viewPos - FragPos);
